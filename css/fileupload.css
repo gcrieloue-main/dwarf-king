@@ -1,0 +1,41 @@
+.dz-default{
+    background-color : #eee;
+    border : 1px solid #ddd;
+    border-radius : 3px;
+    min-height : 50px;
+    line-height:50px;
+    text-align:center;
+    margin : 10px 0;
+}
+
+.dz-preview{
+    border : 1px dashed #aaa;
+    float:left;
+    margin-right:10px;
+    padding:3px;
+    width:140px;
+    text-align:center;
+    overflow:hidden;
+    overflow:hidden;
+    text-overflow: ellipsis;
+    word-wrap: break-word;
+}
+
+.dz-drag-hover .dz-default{
+    border : 1px dashed #ddd;
+    background-color : #fee;
+}
+
+.dz-success-mark, .dz-error-mark, .dz-error-message {
+    display:none;
+}
+
+#fs {
+    clear:both;
+    display : flex;
+}
+#fs div {
+    width : 200px;
+    margin : 100px;
+}
+

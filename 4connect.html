@@ -1,0 +1,37 @@
+<html>
+
+<head>
+    <title>4 connect</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap-theme.min.css" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular-resource.min.js">
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular-route.min.js">
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>4 Connect</h1>
+
+        <div class="game text-center">
+            <p>Joueur
+                <strong id="playerNumber"></strong>
+            </p>
+            <p id="info" class="bg-info" style="padding:15px">En attente de joueurs</p>
+
+            <canvas id="boardCanvas" width="280px" height="360px" style="margin:10px;">
+                Votre navigateur ne supporte pas les canvas.
+            </canvas>
+
+            <script src="/socket.io/socket.io.js"></script>
+            <script src="./4connect.client.js"></script>
+        </div>
+    </div>
+</body>
+
+</html>
