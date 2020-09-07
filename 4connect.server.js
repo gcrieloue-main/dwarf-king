@@ -199,7 +199,7 @@ function checkDiagonals() {
   }
 }
 
-let port = process.argv[2] || 3006;
+let port = process.env.PORT || 8080;
 http.listen(port, function () {
   console.log("4connect listening on *:" + port);
 });
