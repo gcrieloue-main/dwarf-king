@@ -166,7 +166,7 @@ function checkDiagonals() {
   for (var k = 0; k < 6; k++) {
     for (var l = 6; l >= 0; l--) {
       // check diag 1
-      for (var i = k, j = l; i < 6 && j >= 0; i++, j--) {
+      for (var i = k, j = l; i < 7 && j >= 0; i++, j--) {
         if (board[i][j] != currentPlayerDiag1) {
           cumulDiag1 = 0;
           currentPlayerDiag1 = board[i][j];
@@ -179,7 +179,7 @@ function checkDiagonals() {
         }
       }
       //check diag 2
-      for (var i = k, j = l; i < 6 && j < 6; i++, j++) {
+      for (var i = k, j = l; i < 7 && j < 7; i++, j++) {
         if (board[i][j] != currentPlayerDiag2) {
           cumulDiag2 = 0;
           currentPlayerDiag2 = board[i][j];
