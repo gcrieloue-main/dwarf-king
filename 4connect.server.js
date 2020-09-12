@@ -24,6 +24,7 @@ const events = {
     PLAY: "play",
   },
   OUT: {
+    ROOM: "room",
     NUMBER: "number",
     GAMEOVER: "gameover",
     BOARD: "board",
@@ -42,6 +43,7 @@ io.on(events.IN.CONNECTION, (socket) => {
   }
   socket.game = game;
   socket.join(game.id);
+  socket.emit(events.OUT.ROOM, game.id);
 
   if (!socket.game.player1) {
     socket.game.player1 = true;
@@ -49,16 +51,13 @@ io.on(events.IN.CONNECTION, (socket) => {
   } else if (!socket.game.player2) {
     socket.game.player2 = true;
     socket.player = players.PLAYER_2;
-  } else {
-    socket.emit(events.OUT.FORBIDDEN, "no_place_available");
-    return;
   }
 
   console.log(
+    game.id,
     "player ",
     socket.player,
     " joined room",
-    game.id,
     socket.game.player1,
     socket.game.player2
   );
@@ -84,6 +83,7 @@ io.on(events.IN.CONNECTION, (socket) => {
       socket.game.id,
       "played on " + x + "=>" + socket.game.colHeights[x - 1]
     );
+
     if (
       socket.game.currentPlayer != socket.player ||
       !fn.moveEnabled(socket.game, x)
@@ -97,10 +97,12 @@ io.on(events.IN.CONNECTION, (socket) => {
         socket.game.currentPlayer == players.PLAYER_1
           ? players.PLAYER_2
           : players.PLAYER_1;
+
       console.log(socket.game.board);
       io.in(socket.game.id).emit("board", {
         board: socket.game.board,
         player: socket.game.currentPlayer,
+        move: x,
       });
     }
 
@@ -133,6 +135,7 @@ io.on(events.IN.CONNECTION, (socket) => {
         games.delete(socket.game.id);
       } else {
         fn.resetBoard(socket.game);
+        console.log(socket.game.id, "not-ready");
         io.in(game.id).emit(events.OUT.STATUS, "not-ready");
       }
     }
