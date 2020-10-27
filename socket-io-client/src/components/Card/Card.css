@@ -1,0 +1,56 @@
+
+.card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    width: 100px;
+    margin: 1rem;
+    word-wrap: break-word;
+    font-weight: bold;
+    border-radius: 5px;
+    box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px;
+}
+.card.playable {
+    cursor: pointer;
+}
+.card.active {
+    background-color: lightblue;
+}
+.card.stat {
+    height: 50px;
+}
+.card.playable:hover {
+    box-shadow: rgba(0, 0, 0, 0.5) 0px 4px 12px;
+    animation: gradient 3s ease infinite;
+}
+.color-red {
+    background: linear-gradient(-45deg, #fff, #ee7752, #e73c7e);
+    background-size: 300% 300%;
+}
+.color-blue {
+    background: linear-gradient(-45deg, #fff, #3333d5, #23a6ff);
+    background-size: 300% 300%;
+}
+.color-green {
+    background: linear-gradient(-45deg, #fff, #23d5ab, #23d5ff);
+    background-size: 300% 300%;
+}
+@keyframes gradient {
+    0% {
+        background-position: 0% 0%;
+    }
+    25% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    75% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 0% 0%;
+    }
+}
