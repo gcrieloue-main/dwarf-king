@@ -27,17 +27,17 @@ socket.on("status", function (state) {
   logEvent("status", state);
   if (state.status == "ready") {
     $(".game-folds").html(
-      "<div class='card stat folds-1 " +
+      "<div className='card stat folds-1 " +
         (game.number == 1 ? "active" : "") +
         "'>" +
-        "<div class='player '>Player 1</div>" +
-        "<div class='folds'>0</div>" +
+        "<div className='player '>Player 1</div>" +
+        "<div className='folds'>0</div>" +
         "</div>" +
-        "<div class='card stat folds-2 " +
+        "<div className='card stat folds-2 " +
         (game.number == 2 ? "active" : "") +
         "'>" +
-        "<div class='player'>Player 2</div>" +
-        "<div class='folds'>0</div>" +
+        "<div className='player'>Player 2</div>" +
+        "<div className='folds'>0</div>" +
         "</div>"
     );
   }
@@ -73,7 +73,7 @@ socket.on("board", function (data) {
   console.log("cards", data.cards);
   for (card of data.cards.filter((c) => c.status === "HAND")) {
     html +=
-      "<div class='card playable color-" +
+      "<div className='card playable color-" +
       card.color.toLowerCase() +
       "' onclick='play(" +
       JSON.stringify(card) +
@@ -92,7 +92,7 @@ socket.on("table", function (data) {
   htmTable = "";
   for (card of data.cards.filter((c) => c.status === "TABLE")) {
     htmTable +=
-      "<div class='card color-" +
+      "<div className='card color-" +
       card.color.toLowerCase() +
       "'>" +
       card.symbol +

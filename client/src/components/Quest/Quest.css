@@ -1,0 +1,17 @@
+.quest {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    width: 200px;
+    margin: 1rem;
+    word-wrap: break-word;
+    font-weight: bold;
+    border-radius: 5px;
+    box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px;
+    background-color: #1c2659;
+    padding: 1rem;
+    box-sizing: border-box;
+    height: 100px;
+}

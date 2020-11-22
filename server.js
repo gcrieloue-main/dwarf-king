@@ -6,18 +6,14 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 const fn = require("./functions");
-const util = require("util");
-
-// app.get("/", function (req, res) {
-//   res.sendFile(path.resolve(__dirname, ".") + "/main.html");
-// });
 
 app.use(express.static(path.resolve(__dirname, ".")));
 
 const players = {
     PLAYER_1: 1,
     PLAYER_2: 2,
-    NB: 2,
+    MAX_PLAYERS: 5,
+    MIN_PLAYERS: 2,
 };
 
 const events = {
@@ -26,8 +22,14 @@ const events = {
         DISCONNECT: "disconnect",
         RESTART: "restart",
         PLAY: "play",
+        LIST: "list",
+        JOIN: "join",
+        START: "start",
+        CREATE: "create",
+        QUEST_SELECTED: "questSelected",
     },
     OUT: {
+        LIST: "list",
         ROOM: "room",
         NUMBER: "number",
         GAMEOVER: "gameover",
@@ -38,43 +40,88 @@ const events = {
         FOLD: "fold",
         SCORE: "score",
         QUEST: "quest",
+        QUEST_SELECTION: "questSelection",
+        ROUND: "round",
+        NB_PLAYERS: "nbPlayers",
     },
 };
 
 const games = new Map();
 
 io.on(events.IN.CONNECTION, (socket) => {
-    game = fn.getAvailableGame(games);
-    if (!game) {
+
+    socket.on(events.IN.LIST, function () {
+        console.log('list games', Array.from(games.values()))
+        socket.emit(events.OUT.LIST, Array.from(games.values()));
+    })
+
+    socket.on(events.IN.CREATE, function () {
+        if (socket.game) {
+            console.error("already in game", socket.game.id)
+            return;
+        }
+
         game = fn.createNewGame();
+        console.log('create game', game.id)
         games.set(game.id, game);
-    }
-    socket.game = game;
-    socket.join(game.id);
-    emitToPlayer(socket, events.OUT.ROOM, game.id);
 
-    if (socket.game.nbPlayers < players.NB) {
+        joinGame(socket, game);
+
+        console.log("list games", Array.from(games.values()))
+        io.emit(events.OUT.LIST, Array.from(games.values()));
+    })
+
+    socket.on(events.IN.JOIN, function (gameId) {
+        if (!games.has(gameId)) {
+            console.error("game", gameId, "does not exist");
+            return;
+        }
+
+        if (socket.game) {
+            console.error("already in game", socket.game.id);
+            return;
+        }
+
+        console.log("joining game", gameId);
+        joinGame(socket, games.get(gameId));
+        io.emit(events.OUT.LIST, Array.from(games.values()));
+    })
+
+    socket.on(events.IN.START, function (gameId) {
+        startGame(socket, games.get(gameId));
+    })
+
+    function joinGame(socket, game) {
+        if (game.started) {
+            console.error("game", game.id, "has already started");
+            return;
+        }
+
+        if (game.nbPlayers > players.MAX_PLAYERS) {
+            console.error("game", game.id, "is full");
+            return;
+        }
+
+        socket.game = game;
+        socket.join(game.id);
         registerPlayer(socket);
-    }
+        emitToPlayer(socket, events.OUT.ROOM, game.id);
 
-    console.log(
-        game.id,
-        "player ",
-        socket.player,
-        " joined room",
-        socket.game.nbPlayers,
-        "/",
-        players.NB
-    );
+        console.log(
+            socket.game.id,
+            "player ",
+            socket.player,
+            " joined room",
+            socket.game.nbPlayers,
+            "/",
+            players.MAX_PLAYERS
+        );
 
-    emitToPlayer(socket, events.OUT.NUMBER, socket.player);
-
-    if (socket.game.nbPlayers === players.NB) {
-        startGame(socket);
+        emitToPlayer(socket, events.OUT.NUMBER, socket.player);
     }
 
     function registerPlayer(socket) {
-        firstPos = socket.game.players.findIndex((pos) => !pos);
+        let firstPos = socket.game.players.findIndex((pos) => !pos);
         if (firstPos !== -1) {
             socket.game.players[firstPos] = true;
         } else {
@@ -86,43 +133,77 @@ io.on(events.IN.CONNECTION, (socket) => {
     }
 
     function startGame(socket) {
+        if (!socket.game) {
+            console.error("can't start game", "the game no longer exists");
+            return;
+        }
+
+        if (socket.game.started) {
+            console.error("game", game.id, "already started");
+            return;
+        }
+
+        if (socket.game.nbPlayers < players.MIN_PLAYERS) {
+            console.error("can't start game ", socket.game.id, ", waiting for more players")
+            return;
+        }
+
         console.log("=============================================")
         console.log(socket.game.id, "ready");
 
-        game.currentPlayer = 1;
+        socket.game.currentPlayer = 1;
 
         //reset score
-        emitToAll(events.OUT.ROUND, {score: []})
+        emitToAll(socket.game.id, events.OUT.NB_PLAYERS, socket.game.nbPlayers)
+        emitToAll(socket.game.id, events.OUT.ROUND, {score: []})
+        emitToAll(socket.game.id, events.OUT.QUEST, undefined)
 
         newRound(socket);
 
-        emitToAll(game.id, events.OUT.STATUS, {
-            player: game.currentPlayer,
+        socket.game.started = true;
+
+        emitToAll(socket.game.id, events.OUT.STATUS, {
+            player: socket.game.currentPlayer,
             status: "ready",
         });
     }
 
     function newRound(socket) {
         console.log('new round')
+        socket.game.turnNumber++;
+        socket.game.currentRule = undefined;
+        socket.game.currentQuest = socket.game.availableQuests[Math.floor(Math.random() * socket.game.availableQuests.length)];
+        socket.game.currentColor = undefined;
 
-        const randomQuest = game.availableQuests[Math.floor(Math.random() * game.availableQuests.length)];
-        game.currentQuest = randomQuest;
-
-        emitToAll(socket.game.id, events.OUT.QUEST, game.currentQuest);
-
-        console.log("new round with quest ", `'${game.currentQuest.ruleName}'`);
+        console.log("new round with quest ", `'${socket.game.currentQuest.ruleName}'`);
 
         // deal cards to players
-        game.playersCards = fn.dealCards().map(c => ({cards: c}));
+        socket.game.playersCards = fn.dealCards(socket.game.nbPlayers).map(c => ({cards: c}));
 
         // send its cards to each player
-        emitToEach(events.OUT.BOARD, s => ({
-            ...game.playersCards[s.player - 1],
+        emitToEach(socket.game.id, events.OUT.BOARD, s => ({
+            ...socket.game.playersCards[s.player - 1],
             player: socket.game.currentPlayer,
         }));
 
-        emitToAll(socket.game.id, events.OUT.TABLE, {cards: [], player: socket.game.currentPlayer})
+        emitToAll(socket.game.id, events.OUT.TABLE, {
+            cards: [],
+            currentColor: undefined,
+            player: socket.game.currentPlayer
+        })
+        emitToAll(socket.game.id, events.OUT.QUEST, undefined)
+        emitToAll(socket.game.id, events.OUT.QUEST_SELECTION, socket.game.currentQuest)
     }
+
+    socket.on(events.IN.QUEST_SELECTED, function (data) {
+        if (socket.game.currentQuest) {
+            socket.game.currentRule = socket.game.currentQuest[0];
+            console.log('quest selected', data);
+            emitToAll(socket.game.id, events.OUT.QUEST, socket.game.currentRule);
+        } else {
+            console.error("no quest");
+        }
+    });
 
     socket.on(events.IN.PLAY, function (cardPlayed) {
         if (socket.player !== socket.game.currentPlayer) {
@@ -139,12 +220,16 @@ io.on(events.IN.CONNECTION, (socket) => {
             socket.game.playersCards[socket.player - 1].cards
                 .filter(card => card.symbol !== cardPlayed.symbol || card.color !== cardPlayed.color);
 
-        const turnOver = socket.game.table.length === players.NB && !socket.game.table.includes(undefined);
+        const nbPlayersWhichHavePlayed = socket.game.table.filter(card => card !== undefined).length;
+        if (nbPlayersWhichHavePlayed === 1) {
+            socket.game.currentColor = cardPlayed.color;
+        }
+        const turnOver = nbPlayersWhichHavePlayed === socket.game.nbPlayers;
 
         // if turn is not over, it's next player's turn
         if (!turnOver) {
             socket.game.currentPlayer =
-                (socket.game.currentPlayer % game.nbPlayers) + 1;
+                (socket.game.currentPlayer % socket.game.nbPlayers) + 1;
         }
 
         console.log("next player", socket.game.currentPlayer);
@@ -156,8 +241,9 @@ io.on(events.IN.CONNECTION, (socket) => {
         });
 
         // tell everyone the cards on the table
-        emitToAll(game.id, events.OUT.TABLE, {
+        emitToAll(socket.game.id, events.OUT.TABLE, {
             cards: socket.game.table,
+            currentColor: socket.game.currentColor,
             player: !turnOver ? socket.game.currentPlayer : 0,
         });
 
@@ -172,7 +258,7 @@ io.on(events.IN.CONNECTION, (socket) => {
     });
 
     function endTableTurn(socket) {
-        console.log('end table turn')
+        console.log('end table turn');
         const hasWon = foldWinner(socket.game.table);
 
         // add fold to the winner folds
@@ -180,15 +266,15 @@ io.on(events.IN.CONNECTION, (socket) => {
             = [...(socket.game.playersCards[hasWon.winner - 1].folds || []), hasWon.cards];
 
         // send its cards to every player
-        emitToEach(events.OUT.BOARD, s => ({
+        emitToEach(socket.game.id, events.OUT.BOARD, s => ({
             ...game.playersCards[s.player - 1],
-            player: s.game.currentPlayer
+            player: s.game && s.game.currentPlayer
         }))
 
         socket.game.table = [];
         socket.game.currentPlayer = hasWon.winner;
         // on envoie à tous les joueurs le gagnant du pli
-        emitToAll(game.id, events.OUT.FOLD, {
+        emitToAll(socket.game.id, events.OUT.FOLD, {
             winner: hasWon.winner,
             foldsNumbers: socket.game.playersCards.map(c => (c.folds && c.folds.length) || 0)
         });
@@ -224,20 +310,30 @@ io.on(events.IN.CONNECTION, (socket) => {
             socket.game.playersCards.filter((c) => c.cards.length > 0).length === 0;
         if (roundOver) {
 
-            const roundScore = socket.game.currentQuest.ruleFn(socket.game.playersCards);
+            const roundScore = socket.game.currentRule.ruleFn(socket.game.playersCards);
             console.log(
                 "round is over",
-                socket.game.currentQuest,
+                socket.game.currentRule,
                 JSON.stringify(socket.game.playersCards.map(c => c.folds), null, 2),
                 roundScore
             );
 
             socket.game.score = roundScore.map((rs, index) => rs + ((socket.game.score && socket.game.score[index]) || 0));
 
-            emitToAll(socket.game.id, events.OUT.SCORE, {score: socket.game.score});
+            emitToAll(socket.game.id, events.OUT.SCORE, {
+                roundScore: roundScore,
+                roundRule: socket.game.currentRule,
+                score: socket.game.score,
+                folds: socket.game.playersCards.map(c => c.folds)
+            });
 
-            // start a new round
-            setTimeout(() => newRound(socket), 2000);
+            if (socket.game.turnNumber === 7) {
+                // game is over
+                emitToAll(socket.game.id, events.OUT.GAMEOVER);
+            } else {
+                // start a new round
+                setTimeout(() => newRound(socket), 2000);
+            }
         }
     }
 
@@ -250,20 +346,21 @@ io.on(events.IN.CONNECTION, (socket) => {
     });
 
     socket.on(events.IN.DISCONNECT, function () {
-        console.log(socket.game.id, "player " + socket.player + " disconnected");
-        if (socket.player) {
-            socket.game.nbPlayers--;
-
-            socket.game.players[socket.player - 1] = false;
-            console.log("disconnect", socket.game.players);
-
-            if (socket.game.nbPlayers === 0) {
-                console.log(socket.game.id, "end session");
-                games.delete(socket.game.id);
-            } else {
-                console.log(socket.game.id, "not-ready");
-                emitToAll(game.id, events.OUT.STATUS, "not-ready");
-            }
+        if (socket.game) {
+            console.log(socket.game.id, "player " + socket.player + " disconnected");
+            console.log(socket.game.id, "end session");
+            emitToAll(socket.game.id, events.OUT.STATUS, {status: "disconnected"});
+            // unlink game from player's socket
+            const allSockets = io.sockets.sockets;
+            io.of('/').in(socket.game.id).clients((_, roomSocketsIds) => {
+                roomSocketsIds.forEach(socketId => {
+                    const roomSocket = allSockets[socketId]
+                    roomSocket.game = undefined;
+                    roomSocket.leave(socket.game.id);
+                });
+            })
+            // delete game
+            games.delete(socket.game.id);
         }
     });
 
@@ -279,15 +376,19 @@ io.on(events.IN.CONNECTION, (socket) => {
         socket.emit(eventName, data);
     }
 
-    function emitToEach(eventName, fn) {
-        sockets = io.sockets.sockets;
-        for (var socketId in sockets) {
-            const data = fn(sockets[socketId])
-            console.log("emit to player", sockets[socketId].player, eventName, data);
-            sockets[socketId].emit(eventName, data);
+    function emitToEach(gameId, eventName, fn) {
+        const sockets = io.sockets.sockets;
+        for (const socketId in sockets) {
+            const currentSocket = sockets[socketId];
+            if (currentSocket.game && currentSocket.game.id === gameId) {
+                const data = fn(currentSocket)
+                console.log("emit to player", currentSocket.player, eventName, data);
+                currentSocket.emit(eventName, data);
+            }
         }
     }
-});
+})
+;
 
 const port = process.env.PORT || 4001;
 server.listen(port, function () {

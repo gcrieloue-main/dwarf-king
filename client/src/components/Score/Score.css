@@ -1,0 +1,25 @@
+.player-data {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100px;
+    width: 100px;
+    margin: 1rem;
+    word-wrap: break-word;
+    border-radius: 5px;
+    box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px;
+    background-color: #1c2659;
+}
+
+.player-data p {
+    margin: 0.2rem;
+}
+
+.player-data.current {
+    background-color: #0b0e36;
+}
+
+.player-name {
+    font-weight: bold;
+}
