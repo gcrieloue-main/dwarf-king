@@ -11,8 +11,8 @@ import Lobby from "./components/Lobby/Lobby";
 import Flip from 'react-reveal/Flip';
 import QuestSelector from "./components/QuestSelector/QuestSelector";
 
-const ENDPOINT = "http://127.0.0.1:4001";
-const socket = socketIOClient(ENDPOINT);
+// const ENDPOINT = "http://127.0.0.1:4001";
+const socket = socketIOClient();
 
 function App() {
     const [games, setGames] = useState([]);
