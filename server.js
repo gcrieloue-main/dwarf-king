@@ -7,7 +7,10 @@ const server = http.createServer(app);
 const io = socketIo(server);
 const fn = require("./functions");
 
-app.use(express.static(path.resolve(__dirname, ".")));
+app.use(express.static(path.join(__dirname, 'client/build')));
+app.get('/', function (req, res) {
+    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+});
 
 const players = {
     PLAYER_1: 1,
