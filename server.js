@@ -393,7 +393,7 @@ io.on(events.IN.CONNECTION, (socket) => {
 })
 ;
 
-const port = process.env.PORT || 4001;
+const port = process.env.PORT || 8080;
 server.listen(port, function () {
     console.log("listening on *:" + port);
 });
