@@ -22,7 +22,7 @@ const symbols = {
     JACK: "JACK",
     QUEEN: "QUEEN",
     KING: "KING",
-    AS: "AS",
+    ACE: "ACE",
 };
 
 module.exports = {
@@ -50,7 +50,7 @@ module.exports = {
                 return 13;
             case symbols.KING:
                 return 14;
-            case symbols.AS:
+            case symbols.ACE:
                 return 15;
 
             default:

@@ -1,8 +1,9 @@
 {
-  "name": "socket-io-client",
-  "version": "0.1.0",
+  "name": "dwarf-client",
+  "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "lottie-web-react": "^1.0.3",
     "@testing-library/jest-dom": "^5.11.5",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
@@ -37,5 +38,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "react-beforeunload": "^2.4.0"
   }
 }

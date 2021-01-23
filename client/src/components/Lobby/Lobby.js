@@ -1,7 +1,22 @@
-import React from "react";
+import React, {useEffect, useRef, useState} from "react";
 import "./Lobby.css"
+import Lottie from "lottie-web-react";
 
 function Lobby(props) {
+
+    const [isAnimated, setIsAnimated] = useState(false);
+    const [playingState, setPlayingState] = useState('stop')
+
+    useEffect(() => {
+        if (isAnimated) {
+            setPlayingState('play');
+        }
+    }, [isAnimated]);
+
+    const onClick = () => {
+        setIsAnimated(true);
+    };
+
     return (
         !props.hasStarted && <div className={"lobby"}>
             <h1>Lobby</h1>
@@ -15,7 +30,20 @@ function Lobby(props) {
                 </p>)
             }
             {!props.number && <p>
-                <button className={"create-button"} onClick={() => props.create()}>Create new game</button>
+                {!isAnimated && <button className={"create-button"} onClick={onClick}>Create new game</button>}
+                {isAnimated && <Lottie className={"animation"}
+                                       playingState={playingState}
+                                       options={{
+                                           path: './lottie/72-favourite-app-icon.json',
+
+                                       }}
+                                       eventListeners={[{
+                                           eventName: 'complete', callback: () => {
+                                               console.log('complete');
+                                               props.create()
+                                           }
+                                       }]}
+                />}
             </p>}
         </div>
     );

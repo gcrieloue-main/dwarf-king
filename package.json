@@ -1,8 +1,8 @@
 {
-  "name": "mastermind",
+  "name": "dwarf-server",
   "version": "1.0.0",
   "description": "",
-  "main": "mastermind.js",
+  "main": "dwarf.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "cd client && npm install && npm run build",

@@ -17,7 +17,7 @@ function Card(props) {
     }
 
     return (
-        <div onClick={play} className={"card color-" + props.color + (props.playable ? " playable" : "")}>
+        <div onClick={play} className={`card color-${props.color}${props.playable ? " playable" : ""}`}>
             <span className={"corner-top-left"}>{cardSymbol(props.type, props.value)}</span>
             <span className={"corner-top-right"}>{cardSymbol(props.type, props.value)}</span>
             <span className={"corner-bottom-left"}>{cardSymbol(props.type, props.value)}</span>
