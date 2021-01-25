@@ -2,6 +2,9 @@
   "name": "dwarf-server",
   "type": "module",
   "version": "1.0.0",
+  "engines": {
+    "node": "14.x"
+  },
   "description": "",
   "main": "dwarf.js",
   "scripts": {

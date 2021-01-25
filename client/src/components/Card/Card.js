@@ -26,7 +26,7 @@ function Card(props) {
             <p className={'card-figure'}>
                 {props.value <= 11 && props.value}
                 {props.value > 11 &&
-                <img src={`./img/${props.color}_${props.type.toLowerCase()}.png`} height={"80px"} alt={""}/>}</p>
+                <img src={`./img/${props.color?.toLowerCase()}_${props.type?.toLowerCase()}.png`} height={"80px"} alt={""}/>}</p>
             <p>{props.type}</p>
         </div>
     );

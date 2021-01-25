@@ -9,9 +9,11 @@ const app = express()
 const server = http.createServer(app)
 const io = socketIo(server)
 
-const modDev = true
+
+const modDev = false
 
 if (!modDev) {
+    const __dirname = path.resolve();
     app.use(express.static(path.join(__dirname, 'client/build')))
     app.get('/', function (req, res) {
         res.sendFile(path.join(__dirname, 'client/build', 'index.html'))
