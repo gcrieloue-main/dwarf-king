@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from "react";
+import React, {useEffect, useState} from "react";
 import "./Lobby.css"
 import Lottie from "lottie-web-react";
 
@@ -40,6 +40,7 @@ function Lobby(props) {
                                        eventListeners={[{
                                            eventName: 'complete', callback: () => {
                                                console.log('complete');
+                                               setIsAnimated(false);
                                                props.create()
                                            }
                                        }]}

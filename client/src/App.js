@@ -25,6 +25,7 @@ function App() {
 
     const [serverError, setServerError] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
+    const [isGameOver, setIsGameOver] = useState(false);
 
     const [board, setBoard] = useState(undefined);
     const [quest, setQuest] = useState(undefined);
@@ -34,6 +35,8 @@ function App() {
     const [folds, setFolds] = useState([]);
     const [foldsNumbers, setFoldsNumbers] = useState([0, 0]);
     const [score, setScore] = useState([]);
+    const [isEndOfRound, setIsEndOfRound] = useState(false);
+    const [roundResult, setRoundResult] = useState(undefined);
 
     const [info, setInfo] = useState('');
 
@@ -81,6 +84,9 @@ function App() {
             }
             setStatus(data.status);
         });
+        socket.on("gameover", data => {
+          setIsGameOver(true);
+        });
         socket.on("number", data => {
             console.log("number", data);
             setNumber(data)
@@ -106,6 +112,8 @@ function App() {
             console.log("score", data);
             setScore(data.score);
             setFoldsNumbers([]);
+            setIsEndOfRound(true);
+            setRoundResult(data);
         });
         socket.on("table", data => {
             console.log("table", data);
@@ -132,6 +140,12 @@ function App() {
     }, [currentPlayer, number]);
 
     useEffect(() => {
+        if (isGameOver) {
+            setInfo("Game is over");
+        }
+    }, [isGameOver,]);
+
+    useEffect(() => {
         if (status === 'not-ready') {
             reset();
         } else if (status === 'ready') {
@@ -142,6 +156,12 @@ function App() {
         }
     }, [status]);
 
+    useEffect(() => {
+        if (isOnAutoPlay && isMyTurn() && quest?.[0] && !rule) {
+            onQuestSelect(0);
+        }
+    }, [quest, currentPlayer]);
+
     function list() {
         socket.emit("list");
     }
@@ -149,6 +169,7 @@ function App() {
     function play(card) {
         console.log('play', card);
         socket.emit("play", card);
+        setCurrentPlayer(undefined);
     }
 
     function create() {
@@ -192,6 +213,10 @@ function App() {
                 || board.filter(c => c.color === currentColor).length === 0); // soit le joueur n'a aucune carte de la bonne couleur
     }
 
+    const isMyTurn = () => {
+        return number === currentPlayer
+    };
+
     return (
         <div>
             <header>
@@ -218,6 +243,7 @@ function App() {
                     <p><strong>{info}</strong></p>
                     <p>Room {room}</p>
                 </div>
+                {isEndOfRound && <RoundResult data={roundResult} close={() => setIsEndOfRound(false)}/>}
                 <div className={"game-table"}>
                     {quest && !rule && <div className={"quest-selector-container"}>
                         <QuestSelector quest={quest}
@@ -225,22 +251,26 @@ function App() {
                                        questSelectable={currentPlayer === number}
                         />
                     </div>}
-                    {table?.map((card, index) => <div key={"b" + index}><Card onClick={() => play(card)}
-                                                                              playable={false}
-                                                                              type={card?.symbol}
-                                                                              value={card?.value}
-                                                                              color={card?.color?.toLowerCase()}/>
-                    </div>)}
+                    {table?.map((card, index) =>
+                        <div key={"b" + index}>
+                            <Card onClick={() => play(card)}
+                                  playable={false}
+                                  type={card?.symbol}
+                                  value={card?.value}
+                                  color={card?.color?.toLowerCase()}/>
+                        </div>)}
 
                 </div>
                 <Flip left cascade>
                     <div className={"game-container" + (number === currentPlayer ? " active" : "")}>
-                        {board?.map((card, index) => <div key={"a" + index}><Card onClick={() => play(card)}
-                                                                                  playable={canPlay(card)}
-                                                                                  type={card?.symbol}
-                                                                                  value={card?.value}
-                                                                                  color={card?.color?.toLowerCase()}/>
-                        </div>)}
+                        {!isEndOfRound && board?.map((card, index) =>
+                            <div key={"a" + index}>
+                                <Card onClick={() => play(card)}
+                                      playable={canPlay(card)}
+                                      type={card?.symbol}
+                                      value={card?.value}
+                                      color={card?.color?.toLowerCase()}/>
+                            </div>)}
                     </div>
                 </Flip>
             </div>}
