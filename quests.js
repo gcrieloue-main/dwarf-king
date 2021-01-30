@@ -1,4 +1,4 @@
-import { createNewRule, filterByColor } from './functions.js'
+import { createNewRule, filterByColor } from './game.js'
 import { colors, symbols } from './constants.js'
 
 export function createQuests() {

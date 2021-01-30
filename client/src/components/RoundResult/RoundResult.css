@@ -20,51 +20,79 @@
     max-height: 800px;
     box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px;
     border-radius: 5px;
-    padding: 0.5rem;
     background-color: #1c2659;
     flex-direction: column;
     overflow: hidden;
 }
-.round-result header{
-    padding-left: 2rem;
+
+.round-result header {
+    text-align: center;
+    margin-bottom: 0.5rem;
+    border-bottom: 2px dashed #2e3b7e;
 }
-.result-score{
-    display: flex;
-    flex-direction: row;
+
+.result-score {
+    flex-grow: 1;
     overflow: auto;
-    padding: 0 2rem 2rem 2rem;
 }
-.result-score h2{
+
+.result-score h2 {
     margin-top: 0;
 }
+
 .result-score > div {
     margin-right: 2rem;
+    display: flex;
 }
-.result-score .card:hover{
+
+.result-score .card:hover {
     z-index: 300;
-    transform:scale(1.5);
+    transform: scale(1.5);
 }
 
 .round-result .card {
     zoom: 0.5;
 }
-.round-result-container button{
-    padding: 1rem;
-    margin-top: 1rem;
+
+.round-result-buttons {
+    border-top: 2px dashed #2e3b7e;
+    text-align: center;
 }
 
-.score-detail{
-    padding-bottom: 2rem;
+.round-result-buttons button {
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.score-detail {
+    padding: 1rem 0 1rem 1rem;
+    display: flex;
+}
+
+.score-detail div {
+    margin-right: 1rem;
+}
+
+.score-detail-player-data {
+    width: 150px;
+    flex-shrink: 0;
+}
+
+.score-detail-player-folds {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
 }
 
 .result-score {
-    scrollbar-color: white rgba(0,0,0,.15);
+    scrollbar-color: white rgba(0, 0, 0, .15);
     scrollbar-width: thin;
 }
+
 .result-score::-webkit-scrollbar {
     width: 1rem;
     background-color: transparent;
 }
+
 .result-score::-webkit-scrollbar-thumb {
     border-radius: 10px;
     background: #F90 -webkit-gradient(linear,
@@ -74,8 +102,9 @@
     color-stop(0.72, rgb(73, 125, 189)),
     color-stop(0.86, rgb(28, 58, 148)));
 }
+
 .result-score::-webkit-scrollbar-track {
-    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
     background-color: #1c2659;
     border-radius: 10px;
 }

@@ -37,29 +37,31 @@ export function specialLog(...args) {
     console.log()
 }
 
-/** Socket IO utils **/
-
-export function emitToAll(io, gameId, eventName, data) {
-    specialLog(2, eventName, 'to all')
-    console.log(data)
-    io.in(gameId).emit(eventName, data)
-}
-
-export function emitToPlayer(socket, eventName, data) {
-    specialLog(2, eventName, 'to', '' + socket.player)
-    console.log(data)
-    socket.emit(eventName, data)
-}
-
-export function emitToEach(io, gameId, eventName, fn) {
-    specialLog(2, eventName, 'to each')
-    const sockets = io.sockets.sockets
-    for (const socketId in sockets) {
-        const currentSocket = sockets[socketId]
-        if (currentSocket.game && currentSocket.game.id === gameId) {
-            const data = fn(currentSocket)
-            console.log('-> to player', currentSocket.player, eventName, data)
-            currentSocket.emit(eventName, data)
+export function newUid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
+        /[xy]/g,
+        function (c) {
+            var r = (Math.random() * 16) | 0,
+                v = c === 'x' ? r : (r & 0x3) | 0x8
+            return v.toString(16)
         }
+    )
+}
+
+export function shuffle(array = []) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * i)
+        const temp = array[i]
+        array[i] = array[j]
+        array[j] = temp
     }
+}
+
+export function splitToChunks(array, parts) {
+    const [...arr] = array
+    let result = []
+    for (let i = parts; i > 0; i--) {
+        result.push(arr.splice(0, Math.ceil(arr.length / i)))
+    }
+    return result
 }

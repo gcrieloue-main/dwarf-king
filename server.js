@@ -2,67 +2,40 @@ import express from 'express'
 import http from 'http'
 import path from 'path'
 import socketIo from 'socket.io'
-import { dealCards, symbolToValue, createNewGame } from './functions.js'
-import { specialLog, emitToAll, emitToPlayer, emitToEach } from './utils.js'
+import * as fn from './game.js'
+import { emitToAll, emitToPlayer, emitToEach } from './socket-utils.js'
+import { specialLog } from './utils.js'
+import { events, players, gameConfig } from './constants.js'
 
 const app = express()
 const server = http.createServer(app)
 const io = socketIo(server)
 
-
 const modDev = false
 
 if (!modDev) {
-    const __dirname = path.resolve();
+    const __dirname = path.resolve()
     app.use(express.static(path.join(__dirname, 'client/build')))
     app.get('/', function (req, res) {
         res.sendFile(path.join(__dirname, 'client/build', 'index.html'))
     })
 }
 
-const players = {
-    PLAYER_1: 1,
-    PLAYER_2: 2,
-    MAX_PLAYERS: 5,
-    MIN_PLAYERS: 2,
-}
-
-const events = {
-    IN: {
-        CONNECTION: 'connection',
-        DISCONNECT: 'disconnect',
-        RESTART: 'restart',
-        PLAY: 'play',
-        LIST: 'list',
-        JOIN: 'join',
-        START: 'start',
-        CREATE: 'create',
-        QUEST_SELECTED: 'questSelected',
-    },
-    OUT: {
-        LIST: 'list',
-        ROOM: 'room',
-        NUMBER: 'number',
-        GAMEOVER: 'gameover',
-        BOARD: 'board',
-        STATUS: 'status',
-        FORBIDDEN: 'forbidden',
-        TABLE: 'table',
-        FOLD: 'fold',
-        SCORE: 'score',
-        QUEST: 'quest',
-        QUEST_SELECTION: 'questSelection',
-        ROUND: 'round',
-        NB_PLAYERS: 'nbPlayers',
-    },
-}
-
 const games = new Map()
 
 io.on(events.IN.CONNECTION, (socket) => {
+    function listGames(everybody) {
+        const availableGames = Array.from(games.values()).filter(
+            (game) => !game.started
+        )
+        console.log('list games', availableGames)
+        everybody
+            ? io.emit(events.OUT.LIST, availableGames)
+            : socket.emit(events.OUT.LIST, availableGames)
+    }
+
     socket.on(events.IN.LIST, function () {
-        console.log('list games', Array.from(games.values()))
-        socket.emit(events.OUT.LIST, Array.from(games.values()))
+        listGames()
     })
 
     socket.on(events.IN.CREATE, function () {
@@ -71,14 +44,13 @@ io.on(events.IN.CONNECTION, (socket) => {
             return
         }
 
-        const game = createNewGame()
+        const game = fn.createNewGame()
         console.log('create game', game.id)
         games.set(game.id, game)
 
         joinGame(socket, game)
 
-        console.log('list games', Array.from(games.values()))
-        io.emit(events.OUT.LIST, Array.from(games.values()))
+        listGames(true)
     })
 
     socket.on(events.IN.JOIN, function (gameId) {
@@ -94,11 +66,16 @@ io.on(events.IN.CONNECTION, (socket) => {
 
         console.log('joining game', gameId)
         joinGame(socket, games.get(gameId))
-        io.emit(events.OUT.LIST, Array.from(games.values()))
+        listGames(true)
     })
 
     socket.on(events.IN.START, function (gameId) {
+        if (socket.game.id !== gameId) {
+            console.error('this user cannot start game', gameId)
+            return
+        }
         startGame(socket, games.get(gameId))
+        listGames(true)
     })
 
     function joinGame(socket, game) {
@@ -114,7 +91,8 @@ io.on(events.IN.CONNECTION, (socket) => {
 
         socket.game = game
         socket.join(game.id)
-        registerPlayer(socket)
+
+        socket.player = fn.registerPlayer(socket.game)
         emitToPlayer(socket, events.OUT.ROOM, game.id)
 
         console.log(
@@ -128,18 +106,6 @@ io.on(events.IN.CONNECTION, (socket) => {
         )
 
         emitToPlayer(socket, events.OUT.NUMBER, socket.player)
-    }
-
-    function registerPlayer(socket) {
-        let firstPos = socket.game.players.findIndex((pos) => !pos)
-        if (firstPos !== -1) {
-            socket.game.players[firstPos] = true
-        } else {
-            socket.game.players.push(true)
-            firstPos = socket.game.players.length - 1
-        }
-        socket.player = firstPos + 1
-        socket.game.nbPlayers++
     }
 
     function startGame(socket) {
@@ -165,7 +131,8 @@ io.on(events.IN.CONNECTION, (socket) => {
         specialLog('start game')
         console.log(socket.game.id, 'ready')
 
-        socket.game.currentPlayer = 1
+        socket.game.firstPlayer = 1
+        socket.game.currentPlayer = socket.game.firstPlayer
 
         //reset score
         emitToAll(
@@ -174,7 +141,6 @@ io.on(events.IN.CONNECTION, (socket) => {
             events.OUT.NB_PLAYERS,
             socket.game.nbPlayers
         )
-        emitToAll(io, socket.game.id, events.OUT.ROUND, { score: [] })
         emitToAll(io, socket.game.id, events.OUT.QUEST, undefined)
 
         newRound(socket)
@@ -189,20 +155,7 @@ io.on(events.IN.CONNECTION, (socket) => {
 
     function newRound(socket) {
         specialLog('new round')
-        socket.game.turnNumber++
-        socket.game.currentRule = undefined
-        socket.game.currentQuest =
-            socket.game.availableQuests[
-                Math.floor(Math.random() * socket.game.availableQuests.length)
-            ]
-        socket.game.currentColor = undefined
-
-        // deal cards to players
-        socket.game.playersCards = dealCards(socket.game.nbPlayers).map(
-            (c) => ({
-                cards: c,
-            })
-        )
+        fn.newRound(socket.game)
 
         // send its cards to each player
         emitToEach(io, socket.game.id, events.OUT.BOARD, (s) => ({
@@ -214,6 +167,7 @@ io.on(events.IN.CONNECTION, (socket) => {
             cards: [],
             currentColor: undefined,
             player: socket.game.currentPlayer,
+            firstPlayer: socket.game.firstPlayer
         })
         emitToAll(io, socket.game.id, events.OUT.QUEST, undefined)
         emitToAll(
@@ -225,7 +179,7 @@ io.on(events.IN.CONNECTION, (socket) => {
     }
 
     socket.on(events.IN.QUEST_SELECTED, function (data) {
-        if (socket.game.currentQuest) {
+        if (socket.game && socket.game.currentQuest) {
             socket.game.currentRule = socket.game.currentQuest[0]
             console.log('quest selected', data)
             emitToAll(
@@ -240,6 +194,11 @@ io.on(events.IN.CONNECTION, (socket) => {
     })
 
     socket.on(events.IN.PLAY, function (cardPlayed) {
+        if (!socket.game) {
+            console.error('game has been ended')
+            return
+        }
+
         if (socket.player !== socket.game.currentPlayer) {
             console.error('it is player', socket.game.currentPlayer, 'turn !')
             return
@@ -257,48 +216,7 @@ io.on(events.IN.CONNECTION, (socket) => {
         specialLog('a player played')
         console.log(socket.game.id, socket.player, 'played', cardPlayed)
 
-        const playedCard = socket.game.playersCards[
-            socket.player - 1
-        ].cards.find(
-            (card) =>
-                card.symbol === cardPlayed.symbol &&
-                card.color === cardPlayed.color
-        )
-        if (!playedCard) {
-            console.error(
-                'player',
-                socket.player,
-                'tried to play a card which is not in its game !',
-                socket.game.playersCards[socket.player - 1].cards
-            )
-            return
-        }
-
-        // add played card to the table
-        socket.game.table[socket.player - 1] = cardPlayed
-
-        // remove played card to the player cards
-        socket.game.playersCards[
-            socket.player - 1
-        ].cards = socket.game.playersCards[socket.player - 1].cards.filter(
-            (card) =>
-                card.symbol !== cardPlayed.symbol ||
-                card.color !== cardPlayed.color
-        )
-
-        const nbPlayersWhichHavePlayed = socket.game.table.filter(
-            (card) => card !== undefined
-        ).length
-        if (nbPlayersWhichHavePlayed === 1) {
-            socket.game.currentColor = cardPlayed.color
-        }
-        const turnOver = nbPlayersWhichHavePlayed === socket.game.nbPlayers
-
-        // if turn is not over, it's next player's turn
-        if (!turnOver) {
-            socket.game.currentPlayer =
-                (socket.game.currentPlayer % socket.game.nbPlayers) + 1
-        }
+        const turnOver = fn.playCard(socket.game, socket.player, cardPlayed)
 
         console.log('next player', socket.game.currentPlayer)
 
@@ -313,6 +231,7 @@ io.on(events.IN.CONNECTION, (socket) => {
             cards: socket.game.table,
             currentColor: socket.game.currentColor,
             player: !turnOver ? socket.game.currentPlayer : 0,
+            firstPlayer: socket.game.firstPlayer
         })
 
         // if everyone has played
@@ -342,7 +261,8 @@ io.on(events.IN.CONNECTION, (socket) => {
         }))
 
         socket.game.table = []
-        socket.game.currentPlayer = hasWon.winner
+        socket.game.firstPlayer = hasWon.winner
+        socket.game.currentPlayer = socket.game.firstPlayer
         // on envoie à tous les joueurs le gagnant du pli
         emitToAll(io, socket.game.id, events.OUT.FOLD, {
             winner: hasWon.winner,
@@ -361,16 +281,16 @@ io.on(events.IN.CONNECTION, (socket) => {
 
         const max = Math.max(
             ...table
-                .filter((c) => c && c.color === currentColor)
-                .map((c) => symbolToValue(c.symbol))
+                .filter((card) => card && card.color === currentColor)
+                .map((card) => fn.symbolToValue(card.symbol))
         )
 
         const winner =
             table.findIndex(
-                (c) =>
-                    c &&
-                    c.color === currentColor &&
-                    symbolToValue(c.symbol) === max
+                (card) =>
+                    card &&
+                    card.color === currentColor &&
+                    fn.symbolToValue(card.symbol) === max
             ) + 1
 
         return {
@@ -387,20 +307,10 @@ io.on(events.IN.CONNECTION, (socket) => {
         if (roundOver) {
             specialLog('end of round ' + socket.game.turnNumber)
 
-            const roundScore = socket.game.currentRule.ruleFn(
-                socket.game.playersCards
-            )
-            console.log(
-                'round is over',
-                socket.game.currentRule,
-                // JSON.stringify(socket.game.playersCards.map(c => c.folds), null, 2),
-                roundScore
-            )
+            const roundScore = fn.computeRoundScore(socket.game)
+            console.log('round is over', socket.game.currentRule, roundScore)
 
-            socket.game.score = roundScore.map(
-                (rs, index) =>
-                    rs + ((socket.game.score && socket.game.score[index]) || 0)
-            )
+            socket.game.score = fn.computeTotalScore(roundScore, socket.game)
 
             emitToAll(io, socket.game.id, events.OUT.SCORE, {
                 roundScore: roundScore,
@@ -409,7 +319,7 @@ io.on(events.IN.CONNECTION, (socket) => {
                 folds: socket.game.playersCards.map((c) => c.folds),
             })
 
-            if (socket.game.turnNumber === 7) {
+            if (socket.game.turnNumber === gameConfig.MB_TURNS) {
                 // game is over
                 emitToAll(io, socket.game.id, events.OUT.GAMEOVER)
             } else {
@@ -449,6 +359,7 @@ io.on(events.IN.CONNECTION, (socket) => {
                 })
             // delete game
             games.delete(socket.game.id)
+            io.emit(events.OUT.LIST, Array.from(games.values()))
         }
     })
 })

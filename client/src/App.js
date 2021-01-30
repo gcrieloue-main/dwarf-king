@@ -11,7 +11,7 @@ import QuestSelector from './components/QuestSelector/QuestSelector'
 import { useBeforeunload } from 'react-beforeunload'
 import RoundResult from './components/RoundResult/RoundResult'
 
-const modeDev = false
+const modeDev = true
 const ENDPOINT = 'http://127.0.0.1:8080'
 const socket = modeDev ? socketIOClient(ENDPOINT) : socketIOClient()
 
@@ -20,6 +20,7 @@ function App() {
     const [room, setRoom] = useState('')
 
     const [currentPlayer, setCurrentPlayer] = useState(undefined)
+    const [firstPlayer, setFirstPlayer] = useState(undefined)
     const [status, setStatus] = useState({})
     const [number, setNumber] = useState(undefined)
     const [nbPlayers, setNbPlayers] = useState(0)
@@ -40,7 +41,7 @@ function App() {
     const [roundResult, setRoundResult] = useState(undefined)
 
     const [info, setInfo] = useState('')
-    const isOnAutoPlay = modeDev
+    const [isOnAutoPlay, setIsOnAutoPlay] = useState(modeDev)
 
     function reset() {
         setGames([])
@@ -57,6 +58,16 @@ function App() {
         setHasStarted(false)
         setCurrentColor(undefined)
     }
+
+    function swithAutoplay() {
+        setIsOnAutoPlay(!isOnAutoPlay)
+    }
+
+    useEffect(() => {
+        window.addEventListener('beforeunload', function (e) {
+            socket.emit('disconnect')
+        })
+    }, [])
 
     useEffect(() => {
         socket.on('connect_error', function () {
@@ -122,6 +133,7 @@ function App() {
             setTable(data.cards)
             setCurrentPlayer(data.player)
             setCurrentColor(data.currentColor)
+            setFirstPlayer(data.firstPlayer)
         })
         socket.on('fold', (data) => {
             console.log('fold', data)
@@ -138,7 +150,7 @@ function App() {
     useEffect(() => {
         if (currentPlayer === number) {
             setInfo("It's your turn")
-        } else {
+        } else if (currentPlayer) {
             setInfo("It's player's " + currentPlayer + ' turn')
         }
     }, [currentPlayer, number])
@@ -230,12 +242,38 @@ function App() {
         return number === currentPlayer
     }
 
+    /**
+     * The table cards are ordered according to the player number.
+     * This function reorder the cards with the first player of the round as the first card.
+     */
+    function reorderWithFirstIndex(firstPlayer, table) {
+        if (!firstPlayer || !table) {
+            return []
+        }
+        const idxArray = []
+        for (let i = firstPlayer - 1; i < table.length; i++) {
+            idxArray.push(i)
+        }
+        for (let i = 0; i < firstPlayer - 1; i++) {
+            idxArray.push(i)
+        }
+        console.log('idx Array', idxArray)
+        return idxArray.map((i) => table[i])
+    }
+
     return (
         <>
             <header className={'main-header'}>
                 <h1>
                     <img src={'./img/crown.png'} alt={''} />
                     Dwarf King
+                    {modeDev && (
+                        <input
+                            type="checkbox"
+                            checked={isOnAutoPlay}
+                            onClick={swithAutoplay}
+                        ></input>
+                    )}
                 </h1>
                 {hasStarted && (
                     <div className={'game-header'}>
@@ -274,6 +312,7 @@ function App() {
                     {isEndOfRound && (
                         <RoundResult
                             data={roundResult}
+                            nbPlayers={nbPlayers}
                             close={() => setIsEndOfRound(false)}
                         />
                     )}
@@ -289,17 +328,19 @@ function App() {
                                 />
                             </div>
                         )}
-                        {table?.map((card, index) => (
-                            <div key={'b' + index}>
-                                <Card
-                                    onClick={() => play(card)}
-                                    playable={false}
-                                    type={card?.symbol}
-                                    value={card?.value}
-                                    color={card?.color?.toLowerCase()}
-                                />
-                            </div>
-                        ))}
+                        {reorderWithFirstIndex(firstPlayer, table)?.map(
+                            (card, index) => (
+                                <div key={'b' + index}>
+                                    <Card
+                                        onClick={() => play(card)}
+                                        playable={false}
+                                        type={card?.symbol}
+                                        value={card?.value}
+                                        color={card?.color?.toLowerCase()}
+                                    />
+                                </div>
+                            )
+                        )}
                     </div>
                     <Flip left cascade>
                         <div
